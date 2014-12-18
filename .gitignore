@@ -3,3 +3,8 @@
 *.out
 *.gz
 *.jpg
+*.bbl
+*.blg
+*.toc
+*.nav
+
