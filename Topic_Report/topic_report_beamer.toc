@@ -1,0 +1,5 @@
+\beamer@endinputifotherversion {3.33pt}
+\beamer@sectionintoc {1}{选题依据}{3}{0}{1}
+\beamer@sectionintoc {2}{研究内容和目标}{7}{0}{2}
+\beamer@sectionintoc {3}{选题研究方案、可行性分析及特色}{11}{0}{3}
+\beamer@sectionintoc {4}{学位论文工作计划及预期研究成果}{15}{0}{4}

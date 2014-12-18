@@ -1,0 +1,24 @@
+\begin{thebibliography}{1}
+
+\bibitem{Harris2013}
+Jonathan Harris.
+\newblock What is jesd204 and why should we pay attention to it?
+\newblock Technical report, Analog Devices, 2013.
+
+\bibitem{nishi2008asic}
+Yoshinori Nishi, Koichi Abe, Jerome Ribo, Benoit Roederer, Anand Gopalan,
+  Mohamed Benmansour, An~Ho, Anusha Bhoi, Masahiro Konishi, Ryuichi Moriizumi,
+  et~al.
+\newblock An asic-ready 1.25--6.25 gb/s serdes in 90nm cmos with multi-standard
+  compatibility.
+\newblock In {\em Solid-State Circuits Conference, 2008. A-SSCC'08. IEEE
+  Asian}, pages 37--40. IEEE, 2008.
+
+\bibitem{tanabe20010}
+Akira Tanabe, Masato Umetani, Ikuo Fujiwara, Takayuki Ogura, Kotaro Kataoka,
+  Masao Okihara, Hiroshi Sakuraba, Tetsuo Endoh, and Fujio Masuoka.
+\newblock 0.18-$\mu$m cmos 10-gb/s multiplexer/demultiplexer ics using current
+  mode logic with tolerance to threshold voltage fluctuation.
+\newblock {\em Solid-State Circuits, IEEE Journal of}, 36(6):988--996, 2001.
+
+\end{thebibliography}

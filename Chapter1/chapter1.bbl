@@ -1,0 +1,28 @@
+\begin{thebibliography}{1}
+
+\bibitem{ad9144AD}
+AD.
+\newblock Quad, 16-bit, 2gsps, txdac+ digital-to-analog converters ad9144,
+  2012.
+
+\bibitem{Beavers2014}
+Ian Beavers.
+\newblock 以jesd204b开始您的系统设计.
+\newblock {\em 中国电子商情}, 2014.
+
+\bibitem{DAC38J84TI}
+TI.
+\newblock Quad-channel, 16-bit, 1.6/2.5 gsps, digital-to-analog converters,
+  2014.
+
+\bibitem{zhangxw2013}
+张小伟.
+\newblock 4g通信技术及其应用前景.
+\newblock {\em 信息通信}, 2013.
+
+\bibitem{zhangf2014}
+张峰.
+\newblock 基于jesd204协议的ad采样数据高速串行传输.
+\newblock {\em 电讯技术}, 2014.
+
+\end{thebibliography}
