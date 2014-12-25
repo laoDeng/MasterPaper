@@ -95,6 +95,34 @@ JESD204B协议中，加扰和解扰是可选项，可以通过寄存器配置取
 
 \subsection{传输层}
 
+传输层是数据流经过数据链路层解码、解扰、同步之后将数据流重新恢复为模数转换器数据的层面，这一层面的主要作用就是根据配置规定，提取出相关转换器的数据。
+
+JESD204B协议主要支持以下几种成帧方式，这也是接收端需要负责完成解帧的几种格式：
+
+\begin{itemize}
+\item 单个设备单个converter到单个lane的link。
+\item 单个设备多个converter到单个lane的link。
+\item 单个设备单个converter到多个lane的link。
+\item 单个设备多个converter到多个lane的link。
+\end{itemize}
+
+以上成帧方式，是直接定义在协议中的，可以发现JESD204B协议主要还是针对单个设备的连接协议。
+但在单个设备中可以存在单个或者多个converter，即模数或数模转换器。
+
+在实际传输中，一系列的样本或者部分样本组成一个frame\footnote{frame，即一组连续的octet。一些位置的octet可以被用作frame对齐信号。}，一个frame可以包含F\footnote{F，即表示每个frame的octet数量。}个octet\footnote{octet，即8位二进制数据}。
+并且在大部分实现中，frame的时钟频率和采样频率相同。
+协议允许在每个frame周期中，同一个converter传送多个样本，样本的数量由寄存器配置项S\footnote{S，单个converter每个frame周期传输的样本数。}决定。
+每一个样本就是一组编码，由可以控制的变量N\footnote{N，即converter的分辨率}来决定样本的位数，并且允许包含控制位和结束位。
+
+考虑最复杂情况，即多个converter，多个lane的成帧情况，成帧方式如图\ref{fig:user_data_format_for_multiple_lanes}所示。其中M表示单个设备converter的数量，CF表示每个link中每个frame时钟周期控制字的数量，NG表示4位长度二进制数据，L表示每个设备的lane数。
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=15cm]{./img/user_data_format_for_multiple_lanes.pdf}
+\caption{多lane传输的用户数据格式}
+\label{fig:user_data_format_for_multiple_lanes}
+\end{figure}
+
 \subsection{设计指标}
 
 
