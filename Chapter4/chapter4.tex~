@@ -1,0 +1,256 @@
+%%This is a very basic article template.
+%%There is just one section and two subsections.
+\documentclass[UTF8]{ctexart}
+\title{第四章 SerDes接收端数据链路层设计}
+\author{陈登}
+\date{\today}
+
+\bibliographystyle{plain}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{amsmath}
+\usepackage{geometry}
+\usepackage{fontspec}
+\usepackage{algorithm}
+\usepackage{algorithmicx}
+\usepackage{algpseudocode}
+
+\geometry{a4paper,centering,scale=0.9}
+\usepackage[format=hang,font=small,textfont=it]{caption}
+\usepackage[toc,page,title,titletoc,header]{appendix} 
+\usepackage[nottoc]{tocbibind}
+
+\begin{document}
+
+\section{8B/10B解码器设计}
+
+根据JESD204B协议规定，SerDes接口为保证信内数据的直流平衡，并且为了便于时钟恢复，采用8B/10B码作为数据链路层的编码方式。
+JESD204B中采用的8B/10B编解码部分主要参考IEEE802.3以太网协议中关于8B/10B的编解码部分。
+但是由于应用环境的不同，JESD204B协议的8B/10B编解码方式同以太网相比略有不同。
+
+\subsection{协议分析}
+
+以太网协议提供了完整的编码表，也可以看作为解码表，这几张表格的正确性毋庸置疑，是最值得参考的资料。
+表中将总共268种的编码情况全部列出，可以作为校验编码正确性的基准值。
+
+以太网协议建议，将一个码组的$RD$\footnote{Running Disparity}分为三部分，第一是上一码组计算后得出的$RD$，第二是编码后6B部分的$RD$，第三是编码后4B部分的$RD$。
+而最后得到的4B部分的$RD$将作为这一组码的$RD$用于接下来码组的计算。
+$RD$运算的基本结构：$last\_code\_group\_RD \to 6B\_sub-block \to 6B\_RD \to 4B\_sub-block \to 4B\_RD(new\_last\_code\_group\_RD)$。
+
+每个sub-block的判断可用以下伪代码表示（6B和4B略有不同）：
+
+\begin{tabbing}
+\qquad\=\kw{if} $000111$ or $0011$ or $1s>0s$ \\
+      \>\qquad$6B\_RD=+;RD\_4B=+;$ \\
+      \>\kw{else if} $111000$ or $1100$ or $1s<0s$ \\
+      \>\qquad$6B\_RD=-;RD\_4B=-;$ \\
+      \>\kw{else} \\
+      \>\qquad$6B\_RD=last\_code\_group\_RD;$ \\
+      \>\qquad$4B\_RD=6B\_RD;$ \\
+      \>\kw{endif}
+\end{tabbing}
+
+最后是以太网协议中关于$RD$错误的处理，在协议附录中给出了一些接收当中的$RD$错误。
+可以发现，$RD$错误是不能精确定位的，它的检测主要是通过接收机本地的$RD$和所接收到的$RD$不符所产生的错误。
+但由于一系列的中性码并不会改变$RD$，前一码接收产生的错误可能因为一系列的中性码而直到几个码字后才能检测到。
+
+在JESD204B协议中关于8B/10B编解码的规定，阅读接口协议的数据链路层内容，可以发现，在编解码器之前还有一级控制，主要是用来针对数据成帧结构中的lane、frame、multiframe的校准、同步和错误控制，而控制的依据就是解码器中获得的控制字。
+
+在JESD204B协议中只用到了8B/10B所用控制字的5个，这将简化控制字的解码复杂度，控制字分别如下：
+
+\begin{description}
+\item[K.29.0] 即D，表示Multiframe的开始。
+\item[K.28.3] 即A，表示Lane校准，一般在多帧最后出现。
+\item[K.28.4] 即Q，表示Link设置数据的开始，在他之后跟一系列设置数据，配置Link，他也是ILAS\footnote{Initial Lane Alignment Sequence}的组成部分。
+\item[K.28.7] 即K，表示Group同步，可以说是链接开头最重要的部分，用来保持同步，是CGS\footnote{Code Group Synchronization}的重要控制字。
+\item[K.28.7] 即F，表示Frame校准，一般表示一帧结束。
+\end{description}
+
+JESD204B协议还规定了三种重要的解码错误，这些在解码器级别的错误是属于不太严重的错误，有可能经常发生，在错误并不严重的情况下并不需要进行重同步，但是需要上报给错误处理部分，供应用层决定如何处理。
+
+错误包括以下三种：
+
+\begin{description}
+\item[Not-in-table Error] 这种错误意味着接收到的码字在任何$RD$情况下都不存在于码表中，就是一些非法的码字。对于这些码字，协议规定接收端需要重复之前收到的最新的没有错误的帧。
+\item[Disparity Error] 这种错误就是上文提到的$RD$错误，协议规定解码器要根据收到的数据和$RD$直接解码。由于在检测到$RD$错误时，可能产生错误的不是这个码字，这样的处理方式也比较合理。
+\item[Unexpected Control Character] 这种错误就是指未出现在指定位置的控制字，这一错误的具体处理需要由lane/frame监测部分来决定，属于接下来层级的处理，解码器并无法判断出这一错误。
+\end{description}
+
+\subsection{解码思路}
+
+通过对现有论文编解码方式的理解分析，可以发现编码的方式比较多样，但解码仍主要停留在通过逻辑的方式。
+在\cite{zhaoyh2003}、\cite{hecf2005}和\cite{Widmer1983}中采用的是纯逻辑解码方式；在\cite{wenl2007}和\cite{Actel1998}这两篇文章中采用的是多路选择器的方式。
+
+\paragraph{Running Disparty}
+
+在现有文章的解码体系中，$RD$值仅作为差错检测，这是一种对信号资源的浪费，如果通过$RD$来进行解码，可以更好的利用现有的码表。
+
+\paragraph{comma检测}
+
+comma检测仅在\cite{Actel1998}一文中提到，作为解码器一个重要模块。
+comma不但可以作为Byte同步，也可以用来获取当前编码器输出的$RD$状态，可谓一举两得。
+
+\paragraph{数据字解码}
+
+在获知当前$RD$状态的前提下，根据$RD$对输入码字取反，CASE条件就可以进一步化简。
+整张解码用表就可以缩小一半，一方面节约了芯片面积额，一方面提高了解码效率。
+由\cite{ClassicPaper}中编码原理分析可知，对于均衡码的解码其实非常简便，只需要输出其低$5$或$3$位。
+
+结合以上信息，只需要设计一个均衡码判断电路，就可以快速选择是否通过查表解码。
+
+\paragraph{控制字解码}
+
+对于控制信息，由\cite{Actel1998}中提到的控制信息检测可以发现，通过$RD$和固定位置的比特判断就可以区分该码字是否为控制字，并且确定是哪一类控制字($K.28.x$还是$K.23.7$、$K.27.7$、$K.29.7$、$K.30.7$)。
+在分析编码可知，控制字的$3B$或$5B$部分的编码规则同数据字是相同的。那么就可以“借用”数据字的解码部分来对控制字部分解码，准确输出控制码字。
+
+\subsection{具体模块功能描述}
+
+\subsubsection{第一级，预处理级}
+
+\paragraph{comma检测}
+
+根据输入$10B$数据判断是否为comma信号，同时判断其$RD$。有以下伪代码：
+
+\begin{tabbing}
+\qquad\=\kw{if} $abcdeifghj==0011111001|0011111010|0011111000$ \\
+      \>\qquad$comma=1;RD=0;$ \\
+      \>\kw{else if} $abcdeifghj==1100000110|1100000101|1100000111$ \\
+      \>\qquad$comma=1;RD=1;$ \\
+      \>\kw{else} \\
+      \>\qquad$comma=0;RD=0;$ \\
+      \>\kw{endif}
+\end{tabbing}
+
+\paragraph{K检测}
+
+根据输入的$10B$数据判断是否是控制信号。有以下伪代码：
+
+\begin{tabbing}
+\qquad\=\kw{if} $iedc==1111|0000$ \\
+      \>\qquad$K.28.x=1;K.x.7=0;$ \\
+      \>\kw{else if} $jhgfie==010111|101000$ \\
+      \>\qquad$K.28.x=0;K.x.7=1;$ \\
+      \>\kw{else} \\
+      \>\qquad$K.28.x=0;K.x.7=0;$ \\
+      \>\kw{endif}
+\end{tabbing}
+
+\paragraph{$6B$和$4B$平衡检测}
+
+即分别输出$6B$和$4B$是否平衡。有以下伪代码\footnote{其中$RL$表示游程长度计算，即$1$的个数。下同。}：
+
+\begin{tabbing}
+\qquad\=\kw{if} $RL(6B)==3$ \\
+      \>\qquad$Balance\_6B=1;$ \\
+      \>\kw{else} \\
+      \>\qquad$Balance\_6B=0;$ \\
+      \>\kw{endif}
+\end{tabbing}
+
+\begin{tabbing}
+\qquad\=\kw{if} $RL(4B)==2$ \\
+      \>\qquad$Balance\_4B=1;$ \\
+      \>\kw{else} \\
+      \>\qquad$Balance\_4B=0;$ \\
+      \>\kw{endif}
+\end{tabbing}
+
+\subsubsection{第二级，解码级}
+
+\paragraph{解码表输入级}
+
+根据$RD$情况，对输入码字进行反转。伪代码如下：
+
+\begin{tabbing}
+\qquad\=\kw{if} $RD==1$ \\
+      \>\qquad$6B=6B;$ \\
+      \>\kw{else} \\
+      \>\qquad$6B=~6B;$ \\
+      \>\kw{endif}
+\end{tabbing}
+
+\begin{tabbing}
+\qquad\=$RD\_6=RD|Balance\_6B$ \\
+      \>\kw{if} $RD\_6==1$ \\
+      \>\qquad$4B=4B;$ \\
+      \>\kw{else} \\
+      \>\qquad$4B=~4B;$ \\
+      \>\kw{endif}
+\end{tabbing}
+
+\paragraph{$6B/5B$和$4B/3B$解码级}
+
+根据解码表对输入码字解码。解码表中存的查找项均为$RD$为正时的解码，根据输入输出解码结果。
+
+\paragraph{直接输出或解码输出选择级}
+
+根据码字平衡与否选择是直接输出低五位还是输出查表解码后的结果。
+
+\paragraph{控制字输出或数据字输出选择级}
+
+根据$K.x.7$和$K.28.x$两位，选择输出控制字还是数据字。伪代码如下：
+
+\begin{tabbing}
+\qquad\=\kw{if} $K.x.7==1$ \\
+      \>\qquad$8B=5B+111;K=1;$ \\
+      \>\kw{else if} $K.28.x==1$ \\
+      \>\qquad$8B=00111+3B;K=1;$ \\
+      \>\kw{else} \\
+      \>\qquad$8B=5B+3B;K=0;$ \\
+      \>\kw{endif}
+\end{tabbing}
+
+\subsection{解码表}
+
+\begin{table}[H]
+\centering
+\caption{$6B/5B$和$4B/3B$解码表}
+\label{table:tab1_decoder_table}
+
+\begin{tabular}{|c|rrr|}
+
+\hline
+Name   & $RD$ & $abcdei$ & $ABCDE$ \\
+\hline
+$D.0$  & $+$  & $011000$ & $00000$ \\
+$D.1$  & $+$  & $100010$ & $10000$ \\
+$D.2$  & $+$  & $010010$ & $01000$ \\
+$D.4$  & $+$  & $001010$ & $00100$ \\
+$D.7$  & $+$  & $000111$ & $11100$ \\
+$D.8$  & $+$  & $000110$ & $00010$ \\
+$D.15$ & $+$  & $101000$ & $11110$ \\
+$D.16$ & $+$  & $100100$ & $00001$ \\
+$D.23$ & $+$  & $000101$ & $11101$ \\
+$D.24$ & $+$  & $001100$ & $00011$ \\
+$D.27$ & $+$  & $001001$ & $11011$ \\
+$D.29$ & $+$  & $010001$ & $10111$ \\
+$D.30$ & $+$  & $100001$ & $01111$ \\
+$D.31$ & $+$  & $010100$ & $11111$ \\
+\hline
+
+\end{tabular}
+\qquad
+\begin{tabular}{|c|rrr|}
+
+\hline
+Name     & $RD$ & $fghj$ & $FGH$ \\
+\hline
+$D.x.0$  & $+$  & $0100$ & $000$ \\
+$D.x.3$  & $+$  & $0011$ & $110$ \\
+$D.x.4$  & $+$  & $0010$ & $001$ \\
+$D.x.7$  & $+$  & $0001$ & $111$ \\
+$D.x.7$  & $+$  & $1000$ & $111$ \\
+\hline
+
+\end{tabular}
+
+\end{table}
+
+
+\subsection{解扰器设计}
+
+\subsection{Frame/Lane对齐字符检测设计}
+
+\bibliography{../../bib/serdes}
+\end{document}
+
