@@ -232,8 +232,6 @@ Not-In-Table Error的检测也分为4B和6B两部分。
 \end{minipage}
 \end{table}
 
-\subsubsection{极性错误检测}
-
 极性错误检测部分负责检测关于极性的错误，主要就是指不能出现连续相同的极性变化。
 例如之前一个码字的RD为RD-，则接下来收到的6B编码的RD必须为均衡或者是RD+，这样就保证了信道上码字的均衡。
 极性检测实际上考虑的是三个部分的信息，可以细化为五个信号，包括上一个码字的极性，当前码字6B部分的RD+或RD-，当前码字4B部分的RD+或RD-。
@@ -401,13 +399,19 @@ JESD204的发送端和接收端设备都需要支持加扰传输的数据流。
 
 加扰的主要目的是避免频谱出现过大的峰值，这就意味着过多的帧到帧之间重复数据传输。
 在一个敏感的系统中，频谱的峰值会引起电磁不兼容或者互相干扰的问题。
-过多相同帧也会引起基于编码的直流偏置。，
+过多相同帧也会引起基于编码的直流偏置。
 另一个加扰的好处就是使传输信道的频谱和数据区分开，这样接口上可能的频率选择效应就不会影响到数据的独立性。
 
 \subsubsection{协议分析}
 
 每一种扰码都有相对应的符合实际传输需求的扰码多项式，作为加扰和解扰的依据。
-JESD204B协议规定的扰码多项式为$1+x^{14}+x^{15}$。
+JESD204B协议规定的扰码多项式如式\ref{eq:scrambler_polnomial}所示。
+
+\begin{equation}
+\label{eq:scrambler_polnomial}
+1+x^{14}+x^{15}
+\end{equation}
+
 可见这个加扰多项式的周期长达32767位，足以符合敏感电磁系统频谱的要求。
 并且他允许解扰器在接收到2个octet数据后达成自同步。
 
@@ -416,11 +420,106 @@ JESD204B协议规定的扰码多项式为$1+x^{14}+x^{15}$。
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=14cm]{./img/serial_scrambling.pdf}
+\includegraphics[width=18cm]{./img/serial_scrambling.pdf}
 \caption{扰码frame传输顺序}
 \label{fig:serial_scrambling}
 \end{figure}
 
+加扰器和解扰器要能够实现自同步，就是在没有额外初始信号的情况下，最终能够正确输出加扰编码。
+针对JESD204B的协议规定的扰码多项式，可以得到解扰器串行实现的流程框图，如图所示。
+
+加扰器串行更新函数如式\ref{eq:scrambled_serial_equation}所示。
+
+\begin{equation}
+\label{eq:scrambled_serial_equation}
+S_{15} = D_{15} + S_1 + S_0
+\end{equation}
+
+加扰器并行更新函数如式\ref{eq:scrambled_parallel_equation}所示。
+
+\begin{equation}
+\label{eq:scrambled_parallel_equation}
+\begin{cases}
+	S_{31} = D_{31} + S_{17} + S_{16} \\
+	S_{30} = D_{30} + S_{16} + S_{15} \\
+	\dots							  \\
+	S_{23} = D_{23} + S_{9} + S_{8}   \\
+	S_{22} = D_{22} + S_{8} + S_{7}   \\
+	\dots							  \\
+	S_{17} = D_{17} + S_{3} + S_{2}   \\
+	S_{16} = D_{16} + S_{2} + S_{1}   \\
+\end{cases}
+\end{equation}
+
+解扰器串行更新函数如式\ref{eq:descrambled_serial_equation}所示。
+
+\begin{equation}
+\label{eq:descrambled_serial_equation}
+D_{15} = S_{15} + S_1 + S_0
+\end{equation}
+
+解扰器并行更新函数如式\ref{eq:descrambled_parallel_equation}所示。
+
+\begin{equation}
+\label{eq:descrambled_parallel_equation}
+\begin{cases}
+	D_{31} = S_{31} + S_{17} + S_{16} \\
+	D_{30} = S_{30} + S_{16} + S_{15} \\
+	\dots							  \\
+	D_{23} = S_{23} + S_{9} + S_{8}   \\
+	D_{22} = S_{22} + S_{8} + S_{7}   \\
+	\dots							  \\
+	D_{17} = S_{17} + S_{3} + S_{2}   \\
+	D_{16} = S_{16} + S_{2} + S_{1}   \\
+\end{cases}
+\end{equation}
+
+其中，D表示为未加扰的原始数据位，S表示加扰状态位即加扰数据输出。
+
+扰码的使能也是协议中重点规定的部分。
+加扰只是针对用户数据，并不包括控制字信息，例如码群同步控制字符串和初始化帧对齐序列。
+事实上，在传输中，前两个octet并不会全部进行加扰，因为发送端的加扰器也需要这两个octet作为初始化信息，才能正确进行之后的扰码输出。
+但是两个octet中的最后一位需要根据第一位、第二位和最后一位自己，加扰得到一个新的加扰位进行传输，接下来的数据将需要进行正规的加扰。
+在解扰端的状态寄存器跟踪上扰码同步前需要先接收两个octet的前15位作为初始化信息，之后才能根据第16位和之前接收到的第一第二位正确的输出解扰后数据。
+为了避免在最初的两个octet处理时同正常的加扰区分开来，需要加解扰器有使能开关来切换是否进行解扰或者加扰。
+在接收端，解扰器的输入端连接在8B/10B解码器的输出端，有一个使能开关决定数据是进行解扰还是直接通过。
+
+所以，总体的加扰流控制图如图\ref{fig:scrambler_descrambler_implementation}所示。
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=18cm]{./img/scrambler_descrambler_implementation.pdf}
+\caption{解扰器和加扰器实现流程框图}
+\label{fig:scrambler_descrambler_implementation}
+\end{figure}
+
+最后需要考虑的是加解扰的初始状态问题。
+同很多使用自同步的加扰器一样，当输入数据是重复的初始状态值时，将会产生重复的加扰输出。
+这就失去了加扰的意义，使信号的波形产生较大的峰值，会导致借口的电磁串扰。
+为了尽量避免重复输出，加扰器的初始状态必须设置为一个在传输层不太可能产生的octet。
+推荐的初始值是高位8个1，余下各位为0，即111111110000000。
+
+\subsubsection{解扰思路}
+
+具体逻辑框图如图\ref{fig:scrambler_descrambler_parallel_implementation}所示。
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=18cm]{./img/scrambler_descrambler_parallel_implementation.pdf}
+\caption{解扰器并行驶线}
+\label{fig:scrambler_descrambler_parallel_implementation}
+\end{figure}
+
+为了适应高速的处理环境，解扰器的尽量采用并行设计的思路。
+原先解扰器采用的是串行设计，一个时钟周期只能处理一位。
+在高速系统中，位于数据链路层的解扰器不属于关键部分，不应采用过高的时钟频率。
+图\ref{fig:scrambler_descrambler_parallel_implementation}中将解扰器分为四层进行处理，一次可以16位加扰数据。
+模块以两个octet的周期作为时钟，通过并行处理加快处理速度，牺牲了一定的芯片面积。
+
+第一层输入层，作为最先输入的需要解扰的数据，在解扰使能刚开启时只需要对最后一位进行解扰。
+在完成第一个解扰周期的工作后，会将输入的低15位复制到第二层，低14位复制到第三层，作为之后解扰的依据。
+第二、第三层在一个解扰周期中主要是作为暂存器，将之前的输入存储下来，为之后的解扰做准备。
+通过三层数据对应位置的亦或操作，最后输出正确的解扰结果送到第四层输出层。
 
 
 \subsection{Frame/Lane对齐字符检测设计}
