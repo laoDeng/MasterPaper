@@ -521,7 +521,57 @@ D_{15} = S_{15} + S_1 + S_0
 第二、第三层在一个解扰周期中主要是作为暂存器，将之前的输入存储下来，为之后的解扰做准备。
 通过三层数据对应位置的亦或操作，最后输出正确的解扰结果送到第四层输出层。
 
-\subsection{Frame/Lane对齐字符检测设计}
+\subsection{码群同步设计}
+
+码群同步即是指Code Group Synchronization，它的主要作用就是对控制字/K/进行检测，以判断链路是否开始工作。
+当接收端收到连续四个/K/控制字后，既可以判断码群同步成功。
+在这一时刻，接收端就会取消SYNC请求，通知发送端开始发送ILA序列或者具体数据。
+SYNC请求是反映在接收端的SYNC~接口上的电平信号，根据不同的Subclass，有不同的置位方式。
+由于SYNC~接口还承担着报错、请求同步等各种功能，所以码群同步阶段的SYNC请求指示SYNC~接口需要处理的一种。
+针对来自码群同步阶段的取消SYNC请求，在Subclass 0类设备是在每一个本地的frame时钟沿进行触发，而对于Subclass 2类和Subclass 1类设备，都是在本地multiframe时钟沿进行触发。
+
+\subsubsection{协议分析}
+
+码群同步主要需要检测链路中比特是否同步的问题，发送端在这一阶段会不断的根据自己的时钟发送/K/字符，接收端需要根据自身的接收电路和解码器恢复出/K/字符。
+对于这一阶段的处理，主要是完成/K/字符的检测，也需要对接收到的字符进行判断，是否出现错误。
+这里的错误主要指的是极性的错误，即当前接收端的极性和接收到字符的极性不相符的错误。
+当在累计出现三次极性错误，并且期间没有发现连续的四个正确字符的情况下，需要对lane重新进行码群同步。
+主要指的是发起SYNC请求，这时的接收端就会重新进入码群同步的初始化状态，等待接收正确的/K/字符。
+
+对于Subclass 0类设备的具体的握手流程，如图\ref{fig:cgs_subclass_0}所示。
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=10cm]{./img/cgs_subclass_0.pdf}
+\caption{Subclass 0类设备码群同步过程}
+\label{fig:cgs_subclass_0}
+\end{figure}
+
+对于Subclass 1类或Subclass 2类设备的具体的握手流程，如图\ref{fig:cgs_subclass_1_2}所示。
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=10cm]{./img/cgs_subclass_1_2.pdf}
+\caption{Subclass 1类和2类设备码群同步过程}
+\label{fig:cgs_subclass_1_2}
+\end{figure}
+
+实际上，码群同步的过程是一直伴随着整个链路的启动过程的，它需要时刻监控链路上的字符信息。
+当发送端发送的数据出现连续的错误，或者链路状况变得非常恶劣时，码群同步需要能够检测到这些情况并及时的跳转状态进入到需要重新初始化的状态。
+这一过程可以通过一个状态机来描述，如图\ref{fig:cgs_fsm}所示。
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=18cm]{./img/cgs_fsm.pdf}
+\caption{码群同步有限状态机}
+\label{fig:cgs_fsm}
+\end{figure}
+
+其中Icnt指的是错误数据的计数，Vcnt指的是正确数据的计数，Kcnt指的是/K28.5/数量的计数，VALID指的是接收到正确的数据，INVALID指的是接收到错误的数据，sync_request指的是SYNC请求信号。
+
+\subsubsection{设计思路}
+
+\subsection{初始化lane同步和frame同步设计}
 
 \bibliography{../../bib/serdes}
 \end{document}
