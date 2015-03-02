@@ -1,7 +1,7 @@
 %%This is a very basic article template.
 %%There is just one section and two subsections.
 \documentclass[UTF8]{ctexart}
-\title{第三章 SerDes接收端整体结构介绍}
+\title{第三章 JESD204B接收端整体结构介绍}
 \author{陈登}
 \date{\today}
 
@@ -17,12 +17,12 @@
 
 \geometry{a4paper,centering,scale=0.9}
 \usepackage[format=hang,font=small,textfont=it]{caption}
-\usepackage[toc,page,title,titletoc,header]{appendix} 
+\usepackage[toc,page,title,titletoc,header]{appendix}
 \usepackage[nottoc]{tocbibind}
 
 \begin{document}
 
-\section{SerDes接收端整体结构介绍}
+\section{JESD204B接收端整体结构介绍}
 
 \subsection{总体框架}
 
@@ -32,7 +32,7 @@ JESD204B协议能够支持多Converter\footnote{Converter即为一个模数或�
 \begin{figure}[H]
 \centering
 \includegraphics[width=10cm]{./img/jesd204b_stuct.pdf}
-\caption{JESD20B协议传输结构框图}
+\caption{JESD204B协议传输结构框图}
 \label{fig:jesd204b_stuct}
 \end{figure}
 
@@ -125,13 +125,36 @@ JESD204B协议主要支持以下几种成帧方式，这也是接收端需要负
 \label{fig:user_data_format_for_multiple_lanes}
 \end{figure}
 
+\subsection{确定性时延}
+
+确定性时延主要指的是多个设备之间保证传输数据的同步。
+对于ADC和DAC设备来说，同一时刻需要转换的数据在传输过程中可能会发生相位的偏差，这对传输的正确性有很大的影响。
+而确定性时延就是要解决这一问题，通过延时准确的时钟周期来保证数据的同步可靠，同时也对加快传输速度有很大的帮助。
+
+在很多情况下，JEDS204B系统包含了数据处理单元横跨了很多时钟域，在各个界面间将会造成时延的歧义。
+时延的不确定是由很多复杂的情况引起的，包括了时钟分频产生的相位模糊、设备上电掉电不同步、线路布线布局等多种不同情况。
+
+对于相位模糊，主要是由于同一时钟在由高频信号分频成低频信号的过程中，不同分频器可能产生多种同频但并不同相的信号，从而影响各个传输信号之间相位的同步。
+设备上电掉电所产生不确定性，主要是由于各个不同芯片在上电过程中可能产生的本源性的相位不同步，在绝对时延上可能产生较大的不同。
+布线布局问题，主要是由于高频率的时钟信号在线路传输中会产生差异，几毫米的线路长度差异可能会造成数个时钟周期的差异，从而产生时延的不确定。
+
+以上解释的是时钟信号在传输过程中可能产生的时延不确定性。
+针对这种最基本的时钟不同步问题，Subclass 1类设备主要依靠外部的时钟参考信号来解决，而Subclass 2类设备主要依靠收发端握手协商来解决。
+Subclass 1类设备由于采用了更加简单稳定的外部时钟，所以在传输速率上有一定的优势，但是需要添加额外的芯片和更多的接口。
+而Subclass 2类设备利用自身的接线完成本地multiframe时钟同步，在最初的握手阶段可能需要一定的时间完成初始化，之后也可能在一段时间后失去同步，虽然简化了线路和设计，但是无法达到较高的传输速率，也对芯片内的设计提出了一定要求。
+
+在完成了本地multiframe时钟的同步后，确定性时延主要需要完成的就是各个lane之间octet的同步。
+由于各个lane之间也会由于时延问题产生不确定性，有的lane的数据可能最先到达，有的lane的数据可能会比最先收到的数据晚数个octet之后才会到达收端，这也是表现在收端的主要的时延不确定性问题。
+为了实现在这一阶段的确定性时延，就需要设计合理的接收缓冲来对数据进行缓存，确保之后的输出是同步的。
+从数据从发送端发送开始，到接收端将数据弹出缓存结束，之间产生的时延就被称作确定性时延，这是需要通过电路设计和配置来保证的。
+
 \subsection{设计指标}
 
 本文的设计旨在一定的工艺库支持及约束条件下，设计出符合JESD204B协议规范的SerDes接收端传输层和数据链路层。
 
 第一个重要的实现目标就是多版本兼容。
 JESD204B协议是JESD204协议经由JESD204A协议的升级版本，增加了许多新的功能和特性，尤其是在多设备通信和固定时延设计上。
-协议规定了需要支持的三个Subclass，其中Subclass 0即表示JESD204协议，Subclass 1即表示JESD204A协议，Subclass 2即表示最新的JESD204B协议。
+协议规定了需要支持的三个Subclass，这些Subclass的主要区别就在于对确定性时延的支持方式上，Subclass 0设备是不支持确定性时延的，Subclass 1设备是通过外部的参考时钟作为确定性时延的基准，Subclass 2设备是通过收发端之间的SYNC~信号和ILAS序列不断握手完成本地multiframe时钟的对齐工作。
 设计中需要配有相应的寄存器来选择对应的Subclass，只有当收发端都为相同的Subclass时才能正确通信。
 
 第二个是设计达到的层级。
@@ -147,4 +170,3 @@ JESD204B协议是JESD204协议经由JESD204A协议的升级版本，增加了许
 
 \bibliography{../../bib/serdes}
 \end{document}
-

@@ -17,7 +17,7 @@
 
 \geometry{a4paper,centering,scale=0.9}
 \usepackage[format=hang,font=small,textfont=it]{caption}
-\usepackage[toc,page,title,titletoc,header]{appendix} 
+\usepackage[toc,page,title,titletoc,header]{appendix}
 \usepackage[nottoc]{tocbibind}
 
 \newcommand\kw{\textbf}
@@ -506,7 +506,7 @@ D_{15} = S_{15} + S_1 + S_0
 \begin{figure}[H]
 \centering
 \includegraphics[width=18cm]{./img/scrambler_descrambler_parallel_implementation.pdf}
-\caption{解扰器并行驶线}
+\caption{解扰器并行实现}
 \label{fig:scrambler_descrambler_parallel_implementation}
 \end{figure}
 
@@ -521,9 +521,7 @@ D_{15} = S_{15} + S_1 + S_0
 第二、第三层在一个解扰周期中主要是作为暂存器，将之前的输入存储下来，为之后的解扰做准备。
 通过三层数据对应位置的亦或操作，最后输出正确的解扰结果送到第四层输出层。
 
-
 \subsection{Frame/Lane对齐字符检测设计}
 
 \bibliography{../../bib/serdes}
 \end{document}
-
