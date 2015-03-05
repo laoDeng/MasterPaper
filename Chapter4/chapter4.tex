@@ -64,16 +64,16 @@ JESD204B中采用的8B/10B编解码部分主要参考IEEE802.3以太网协议中
 可以发现，极性错误是不能精确定位的，它的检测主要是通过接收机本地的极性和所接收到的极性不符所产生的错误。
 但由于一系列的中性码并不会改变极性，前一码接收产生的错误可能因为一系列的中性码而直到几个码字后才能检测到。
 
-在JESD204B协议中关于8B/10B编解码的规定，阅读接口协议的数据链路层内容，可以发现，在编解码器之前还有一级控制，主要是用来针对数据成帧结构中的lane、frame、multiframe的校准、同步和错误控制，而控制的依据就是解码器中获得的控制字。
+在JESD204B协议中关于8B/10B编解码的规定，阅读接口协议的数据链路层内容，可以发现，在编解码器之前还有一级控制，主要是用来针对数据成帧结构中的lane、帧、多帧的校准、同步和错误控制，而控制的依据就是解码器中获得的控制字。
 
 在JESD204B协议中只用到了8B/10B所用控制字的5个，这将简化控制字的解码复杂度，控制字分别如下：
 
 \begin{description}
-\item[K.29.0] 即D，表示Multiframe的开始。
+\item[K.29.0] 即D，表示多帧的开始。
 \item[K.28.3] 即A，表示Lane校准，一般在多帧最后出现。
 \item[K.28.4] 即Q，表示Link设置数据的开始，在他之后跟一系列设置数据，配置Link，他也是ILAS\footnote{Initial Lane Alignment Sequence}的组成部分。
 \item[K.28.7] 即K，表示Group同步，可以说是链接开头最重要的部分，用来保持同步，是CGS\footnote{Code Group Synchronization}的重要控制字。
-\item[K.28.7] 即F，表示Frame校准，一般表示一帧结束。
+\item[K.28.7] 即F，表示帧校准，一般表示一帧结束。
 \end{description}
 
 JESD204B协议还规定了三种重要的解码错误，这些在解码器级别的错误是属于不太严重的错误，有可能经常发生，在错误并不严重的情况下并不需要进行重同步，但是需要上报给错误处理部分，供应用层决定如何处理。
@@ -83,7 +83,7 @@ JESD204B协议还规定了三种重要的解码错误，这些在解码器级别
 \begin{description}
 \item[Not-in-table Error] 这种错误意味着接收到的码字在任何极性情况下都不存在于码表中，就是一些非法的码字。对于这些码字，协议规定接收端需要重复之前收到的最新的没有错误的帧。
 \item[Running Disparity Error] 这种错误就是上文提到的极性错误，协议规定解码器要根据收到的数据和极性直接解码。由于在检测到极性错误时，可能产生错误的不是这个码字，这样的处理方式也比较合理。
-\item[Unexpected Control Character] 这种错误就是指未出现在指定位置的控制字，这一错误的具体处理需要由lane/frame监测部分来决定，属于接下来层级的处理，解码器并无法判断出这一错误。
+\item[Unexpected Control Character] 这种错误就是指未出现在指定位置的控制字，这一错误的具体处理需要由lane/帧监测部分来决定，属于接下来层级的处理，解码器并无法判断出这一错误。
 \end{description}
 
 \subsubsection{解码思路}
@@ -421,7 +421,7 @@ JESD204B协议规定的扰码多项式如式\ref{eq:scrambler_polnomial}所示�
 \begin{figure}[H]
 \centering
 \includegraphics[width=18cm]{./img/serial_scrambling.pdf}
-\caption{扰码frame传输顺序}
+\caption{扰码帧传输顺序}
 \label{fig:serial_scrambling}
 \end{figure}
 
@@ -567,7 +567,7 @@ SYNC请求是反映在接收端的SYNC~接口上的电平信号，根据不同�
 \label{fig:cgs_fsm}
 \end{figure}
 
-其中Icnt指的是错误数据的计数，Vcnt指的是正确数据的计数，Kcnt指的是/K28.5/数量的计数，VALID指的是接收到正确的数据，INVALID指的是接收到错误的数据，sync_request指的是SYNC请求信号。
+其中Icnt指的是错误数据的计数，Vcnt指的是正确数据的计数，Kcnt指的是/K28.5/数量的计数，VALID指的是接收到正确的数据，INVALID指的是接收到错误的数据，sync\_request指的是SYNC请求信号。
 
 \subsubsection{设计思路}
 
