@@ -27,7 +27,7 @@
 
 \subsection{接收端数据链路层}
 
-数据链路层主要包含五个部分的模块，8B/10B解码器模块，解扰器模块，码群同步模块，初始化帧同步模块，初始化lane同步模块。
+数据链路层主要包含几个部分的模块，8B/10B解码器模块，码群同步模块，初始化帧同步和初始化lane同步模块，数据流控制模块。
 
 \subsubsection{8B/10B解码器}
 
@@ -81,15 +81,15 @@ Linux下的DC可以通过GUI界面和命令行进行综合。
 
 \hline
 
-\diagbox{项目}{设计} 			&	Classic 	&	Actel 		&	New 	\\
+\diagbox{项目}{设计} & Classic & Actel & New \\
 
 \hline
 
-RD Cal Area($\mu m^2$)			&				&	665(99\%)	&	675		\\
+RD Cal Area($\mu m^2$) & & 665(99\%) & 675 \\
 
-4B/3B Area($\mu m^2$)			&				&	369(148\%)	&	249		\\
+4B/3B Area($\mu m^2$) & & 369(148\%) & 249 \\
 
-6B/5B Area($\mu m^2$)			&				&	1184(172\%)	&	688		\\
+6B/5B Area($\mu m^2$) &				&	1184(172\%)	&	688		\\
 
 \hline
 
@@ -133,9 +133,6 @@ Total Dynamic Power($nW$)		&	65.4(81\%)	&	81.1(101\%)	&	80.5 	\\
 相较于传统方法，新设计在频率上有近25\%的提升，在单元面积上几乎相同，在总面积上减少了7\%。
 但是在功耗上有近20\%的差距。
 
-
-\subsubsection{解扰器}
-
 \subsubsection{码群同步}
 
 \paragraph{仿真}
@@ -161,9 +158,57 @@ Total Dynamic Power($nW$)		&	65.4(81\%)	&	81.1(101\%)	&	80.5 	\\
 
 
 
-\subsubsection{初始化帧同步}
+\subsubsection{初始化帧同步及初始化lane同步}
 
-\subsubsection{初始化lane同步}
+\paragraph{仿真}
+
+设计完整功能的初始化帧同步模块仿真结果如图\ref{fig:8b_10b_decoder_wave}所示。
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=18cm]{./img/ifs_detection_wave.pdf}
+	\caption{始化帧同步模块仿真结果}
+	\label{fig:ifs_detection_wave}
+\end{figure}
+
+以上结果是一次正确的初始化帧同步阶段的仿真结果。
+由于篇幅原因，将ILAS检测也融合到了本次结果中。
+接收到的信号为控制字符的指示信号，如果不是这五个信号中的一个则为数据信号。
+本次仿真的K参数，即多帧中的帧数为4，F参数，即帧中的octet数为4。
+可以发现，当复位信号结束后，Ocounter开始以4计数，由Fcounter和MFcounter可以标识出具体的octet在数据流中的位置。
+当在帧尾位置收到/F/字符，则会触发F\_replace信号，表示需要替换该字符为上一个帧的数据字符。
+当在多帧尾位置收到/A/字符，则会触发A\_replace信号，表示需要替换该字符为上一个帧的数据字符。
+MFcounter在收到4个帧后发生累加，说明4个帧组成一个多帧。
+由于ILAS需要持续4个多帧周期，所以在本图中无法体现。
+
+设计完整功能的数据流处理模块仿真结果如图\ref{fig:data_flow_wave}所示。
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=18cm]{./img/data_flow_wave.pdf}
+	\caption{数据流处理模块仿真结果}
+	\label{fig:data_flow_wave}
+\end{figure}
+
+本设计采用的是控制流与数据流分离的设计思路，控制流由之前图\ref{fig:ifs_detection_wave}所示的状态机模块实现。
+而本数据流接收模块根据状态机给出的控制信息对数据字符进行替换并选择输出路径。
+ILAS数据通过ilas\_out传输到ILAS处理模块，对配置信息进行提取，其控制信号为ilas\_enable信号，当该信号为高电平时，说明该数据流上目前为ILAS配置信息。
+当收到A\_replace和F\_replace信号时，输出的信号会进行替换，将上一帧最后一个字符替换到控制字符，以保证输出数据的正确。
+
+最后将初始化帧同步、初始化lane同步和数据流模块级联仿真结果如图\ref{fig:recv_top_wave}所示。
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=18cm]{./img/recv_top_wave.pdf}
+	\caption{级联仿真结果}
+	\label{fig:recv_top_wave}
+\end{figure}
+
+由于版面限制，只能展示其中一部分信号，模块模拟了完成码群同步后，根据具体信号控制信息的输入，对信号的分配情况。
+初始化帧同步首先就是收到了/R/字符表示进入了ILAS序列传输阶段，并检测到一个多帧的最后存在一个/A/字符，根据替换规则，会将该字符替换为上一帧最后一个字符0x0f。
+但由于这仍处在ILAS阶段，所以配置信息的字符都会视作无效字符，由dump\_out直接输出，不进入之后的模块。
+
+\paragraph{综合}
 
 \subsection{接收端传输层}
 
