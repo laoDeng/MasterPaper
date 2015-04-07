@@ -24,14 +24,11 @@
 \section{设计结果验证}
 
 本章节主要根据各个层级的相关设计要求给出具体的各个模块设计仿真、综合结果。
+主要包含几个部分的模块，8B/10B解码器模块，码群同步模块，初始化帧同步和初始化lane同步模块，数据流控制模块。
 
-\subsection{接收端数据链路层}
+\subsection{8B/10B解码器}
 
-数据链路层主要包含几个部分的模块，8B/10B解码器模块，码群同步模块，初始化帧同步和初始化lane同步模块，数据流控制模块。
-
-\subsubsection{8B/10B解码器}
-
-\paragraph{仿真}
+\subsubsection{仿真}
 
 设计完整功能的8B/10B解码器仿真结果如图\ref{fig:8b_10b_decoder_wave}所示。
 
@@ -59,7 +56,7 @@
 在这6个字符的测试序列中基本展示了8B/10B解码器的基本功能，包括了解码、极性错误判断和控制字符判断。
 基本功能测试基本已经实现。
 
-\paragraph{综合}
+\subsubsection{综合}
 
 综合过程一般分为四步：设定工艺库、读入RTL设计、进行综合、输出报告。
 Linux下的DC可以通过GUI界面和命令行进行综合。
@@ -133,9 +130,9 @@ Total Dynamic Power($nW$)		&	65.4(81\%)	&	81.1(101\%)	&	80.5 	\\
 相较于传统方法，新设计在频率上有近25\%的提升，在单元面积上几乎相同，在总面积上减少了7\%。
 但是在功耗上有近20\%的差距。
 
-\subsubsection{码群同步}
+\subsection{码群同步}
 
-\paragraph{仿真}
+\subsubsection{仿真}
 
 设计完整功能的码群同步仿真结果如图\ref{fig:cgs_detection_wave}所示。
 
@@ -154,7 +151,7 @@ Total Dynamic Power($nW$)		&	65.4(81\%)	&	81.1(101\%)	&	80.5 	\\
 实际上，在CS\_CHECK状态和CS\_DATA状态，码群同步已经完成，设置CS\_CHECK状态的主要目的就是在收到过多的invalid字符后需要回到CS\_INIT状态重新进行码群同步。
 通知发送端的SYNC~信号改变就需要码群同步状态机提供的sync\_request信号。
 
-\paragraph{综合}
+\subsubsection{综合}
 
 表\ref{tab:cgs_detection_syn}所示的是码群同步模块的综合结果，分析可以发现，单个lane的码群同步有限状态机可以工作在1GHz左右的频率下，比特速率大约为8GHz。
 
@@ -201,9 +198,9 @@ Total Dynamic Power($nW$)		&	119.0 	\\
 \end{tabular}
 \end{table}
 
-\subsubsection{初始化帧同步及初始化lane同步}
+\subsection{初始化帧同步及初始化lane同步}
 
-\paragraph{仿真}
+\subsubsection{仿真}
 
 设计完整功能的初始化帧同步模块仿真结果如图\ref{fig:8b_10b_decoder_wave}所示。
 
@@ -251,7 +248,7 @@ ILAS数据通过ilas\_out传输到ILAS处理模块，对配置信息进行提取
 初始化帧同步首先就是收到了/R/字符表示进入了ILAS序列传输阶段，并检测到一个多帧的最后存在一个/A/字符，根据替换规则，会将该字符替换为上一帧最后一个字符0x0f。
 但由于这仍处在ILAS阶段，所以配置信息的字符都会视作无效字符，由dump\_out直接输出，不进入之后的模块。
 
-\paragraph{综合}
+\subsubsection{综合}
 
 表\ref{tab:ifs_ils_detection_syn}所示的是始化帧同步及初始化lane同步模块的综合结果，分析可以发现，单个lane的码群同步有限状态机可以工作在163MHz左右的频率下，比特速率大约为1.3GHz。
 对数据流处理模块分析发现，单个lane可达到的工作频率为502MHz，比特速率大约为4GHz。
@@ -268,13 +265,13 @@ ILAS数据通过ilas\_out传输到ILAS处理模块，对配置信息进行提取
 
 \hline
 
-fa_check Area($\mu m^2$) & 1077 &  \\
+fa check Area($\mu m^2$) & 1077 &  \\
 
-ifs_fsm Area($\mu m^2$) & 6077 &  \\
+ifs fsm Area($\mu m^2$) & 6077 &  \\
 
-ilas_check Area($\mu m^2$) & 76	&  \\
+ilas check Area($\mu m^2$) & 76	&  \\
 
-la_check Area($\mu m^2$) & 1067	&  \\
+la check Area($\mu m^2$) & 1067	&  \\
 
 \hline
 

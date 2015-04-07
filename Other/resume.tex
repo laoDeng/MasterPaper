@@ -1,0 +1,30 @@
+\documentclass[UTF8]{ctexart}
+\title{中文摘要}
+\author{陈登}
+\date{\today}
+
+\bibliographystyle{plain}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{amsmath}
+\usepackage{geometry}
+\usepackage{fontspec}
+\usepackage{algorithm}
+\usepackage{algorithmicx}
+\usepackage{algpseudocode}
+
+\geometry{a4paper,centering,scale=0.9}
+\usepackage[format=hang,font=small,textfont=it]{caption}
+\usepackage[toc,page,title,titletoc,header]{appendix}
+\usepackage[nottoc]{tocbibind}
+
+\begin{document}
+
+JESD204B is one protocol communicates between high-speed analog-digital conversion chip, high-speed analog-digital converter chip and the high-speed signal processor. It uses SerDes as its physical layer standard, by differential serial design ensures high-speed data transmission. Because of its high-speed characteristics, based on the communication protocol interface JESD204B get more and more favored by engineers, and it is widely used in various high-speed analog-digital converter chip, high-speed analog-digital converter chip and FPGA, DSP and other high-speed signal processors.
+
+For the transmission of data samples, as opposed to traditional communication interface, JESD204B solved the problems of converter allocation, multi-chip synchronization, multi-synchronous converter, multi-link transmission and other related issues. The design of serial transmission is used to overcome the problem of the wiring complexity of parallel interface, reduces the complexity of the system and improve the stability. JESD204B protocol announced relatively short time, in China there is also a lack of related research on interface design and implementation of the protocol. This paper bases on the design ideas of ASIC, aims to provide a design of receiver based on JESD204B protocol, including the data link layer in the protocol. In line with the agreement to ensure the basic premise of the protocol, and for practical application to make some improvements.
+
+The main work of this paper is to complete the design of receiver circuit, including 8B/10B decoder design, descrambler design, code group synchronization state machine design, initialization lane synchronization state machine design, frame synchronization initialization state machine design, data stream module design and the related configuration circuit design. By analyzing the receiver of the protocol related to the design requirements, combined with the existing chip-related data sheet, to get reasonable design ideas. Implementation using Verilog RTL level design language, Verdi3 error checking, and then through the Modelsim simulation, and finally using Design Compiler process with a comprehensive library of SMIC 180$nm$ and finally get the logic circuit simulation and synthesis results, with the completion of the chip front-end design work. Where the 8B/10B decoder design approach compared to previous design methods related papers in the area and the operating frequency has certain advantages. Code group synchronization state machine cell area achieved for 1500 $\mu m^2$, operating frequency up to 1GHz; initialize lane synchronous state machine cell area of ​​8700 $\mu m^2$ , the operating frequency up to 162MHz; the data stream module cell area is 5000 $\mu m^2$, operating frequency up to 500MHz; 8B/10B decoder module cell area of ​​1759 $\mu m^2$, operating frequency up to 224MHz.
+
+\bibliography{../../bib/serdes}
+\end{document}
