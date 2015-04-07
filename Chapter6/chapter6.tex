@@ -71,12 +71,12 @@ Linux下的DC可以通过GUI界面和命令行进行综合。
 时序报告会找到耗时最长的路径以表示电路最高的工作速度，单位为纳秒($ns$)；
 功耗报告即整体的功率损耗，单位为纳瓦($nW$)。
 
-表\ref{tab:tab1_syn_compare}详细比较了几种设计，其中括号里面的比例均为和新设计比较的比例，即视新设计具体之为100\%。
+表\ref{tab:decoder_syn}详细比较了几种设计，其中括号里面的比例均为和新设计比较的比例，即视新设计具体之为100\%。
 
 \begin{table}[H]
 \centering
 \caption{综合具体结果比较}
-\label{tab:tab1_syn_compare}
+\label{tab:decoder_syn}
 \begin{tabular}{|c|r|r|r|}
 
 \hline
@@ -156,7 +156,50 @@ Total Dynamic Power($nW$)		&	65.4(81\%)	&	81.1(101\%)	&	80.5 	\\
 
 \paragraph{综合}
 
+表\ref{tab:cgs_detection_syn}所示的是码群同步模块的综合结果，分析可以发现，单个lane的码群同步有限状态机可以工作在1GHz左右的频率下，比特速率大约为8GHz。
 
+\begin{table}[H]
+\centering
+\caption{码群同步模块综合具体结果}
+\label{tab:cgs_detection_syn}
+\begin{tabular}{|c|r|r|r|}
+
+\hline
+
+\diagbox{项目}{设计} &  码群同步 \\
+
+\hline
+
+Total cell Area($\mu m^2$) & 1586 \\
+
+\hline
+
+Total Area($\mu m$)				&	10033	\\
+
+\hline
+
+Timing($ns$)					   &	8.97 \\
+
+Time Used($ns$)					 & 0.91 \\
+
+\hline
+
+Frequency($MHz$)				&	1098 	\\
+
+\hline
+
+Cell Internal Power($nW$)		&	103.6	\\
+
+Net Switing Power($nW$)			&	15.5 	\\
+
+\hline
+
+Total Dynamic Power($nW$)		&	119.0 	\\
+
+\hline
+
+\end{tabular}
+\end{table}
 
 \subsubsection{初始化帧同步及初始化lane同步}
 
@@ -210,9 +253,61 @@ ILAS数据通过ilas\_out传输到ILAS处理模块，对配置信息进行提取
 
 \paragraph{综合}
 
-\subsection{接收端传输层}
+表\ref{tab:ifs_ils_detection_syn}所示的是始化帧同步及初始化lane同步模块的综合结果，分析可以发现，单个lane的码群同步有限状态机可以工作在163MHz左右的频率下，比特速率大约为1.3GHz。
+对数据流处理模块分析发现，单个lane可达到的工作频率为502MHz，比特速率大约为4GHz。
 
-\subsubsection{解帧器}
+\begin{table}[H]
+\centering
+\caption{模块综合具体结果}
+\label{tab:ifs_ils_detection_syn}
+\begin{tabular}{|c|r|r|r|}
+
+\hline
+
+\diagbox{项目}{设计} & 初始化帧同步及初始化lane同步模块 & 数据流控制模块 \\
+
+\hline
+
+fa_check Area($\mu m^2$) & 1077 &  \\
+
+ifs_fsm Area($\mu m^2$) & 6077 &  \\
+
+ilas_check Area($\mu m^2$) & 76	&  \\
+
+la_check Area($\mu m^2$) & 1067	&  \\
+
+\hline
+
+Total cell Area($\mu m^2$) & 8718 & 4966 \\
+
+\hline
+
+Total Area($\mu m$)				&	51885	& 23819 \\
+
+\hline
+
+Timing($ns$)					   & 3.71 & 7.96 \\
+
+Time Used($ns$)					 & 6.15 & 1.99 \\
+
+\hline
+
+Frequency($MHz$)				&	162.6 & 502.5 \\
+
+\hline
+
+Cell Internal Power($nW$)		&	428.8	& 435.4 \\
+
+Net Switing Power($nW$)			&	96.8 & 55.5 \\
+
+\hline
+
+Total Dynamic Power($nW$)		&	535.6	& 490.9 \\
+
+\hline
+
+\end{tabular}
+\end{table}
 
 \bibliography{../../bib/serdes}
 \end{document}
