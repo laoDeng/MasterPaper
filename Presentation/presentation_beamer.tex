@@ -10,6 +10,7 @@
 \usepackage{algorithm}
 \usepackage{algorithmicx}
 \usepackage{algpseudocode}
+
 \usetheme{Berlin}
 \newtheorem{formula}{公式}
 
@@ -23,6 +24,7 @@
 
 \begin{frame}
 	\titlepage
+	Power by \LaTeX
 \end{frame}
 
 \begin{frame}{目录}
@@ -41,10 +43,10 @@
 	\begin{figure}
 	\includegraphics[width=10cm]{./img/ad9144.png}
 	\end{figure}
-	\begin{formula}
+	\begin{block}{}
 		$$Max Rate = 4 * 16 * 1.06 = 67.84Gbps$$
 		$$Max Lane Rate = Max Rate / 8 = 8.48Gbps$$
-	\end{formula}
+	\end{block}
 \end{frame}
 
 
@@ -114,8 +116,8 @@
   对齐检测
   \begin{itemize}
   \item [CGS] 码群同步，Code Group Synchronization。
-  \item [ILS] 初始化帧同步，Initial Frame Synchronization。
-  \item [IFS] 初始化lane同步，Initial Lane Alignment Synchronization。
+  \item [IFS] 初始化帧同步，Initial Frame Synchronization。
+  \item [ILS] 初始化lane同步，Initial Lane Alignment Synchronization。
   \end{itemize}
 \end{frame}
 
@@ -141,6 +143,12 @@
 	\centering
 	\includegraphics[scale=0.5]{./img/ilas.pdf}
 	\end{figure}
+\end{frame}
+
+\begin{frame}{JESD204B协议接收部分}{ILAS组成}
+  \begin{figure}
+  \includegraphics[scale=0.6]{./img/mapping_link_configuration_fields.pdf}
+  \end{figure}
 \end{frame}
 
 \begin{frame}{JESD204B协议接收部分}{传输层}
@@ -210,11 +218,16 @@
   \end{table}
 \end{frame}
 
-\begin{frame}{接收部分具体设计}{解扰器设计-扰码帧传输顺序}
-  \begin{figure}
-  \centering
-  \includegraphics[scale=0.6]{./img/serial_scrambling.pdf}
-  \end{figure}
+\begin{frame}{接收部分具体设计}{解扰器设计-解扰公式}
+	\begin{equation}
+		\begin{cases}
+			D_{31} = S_{31} + S_{17} + S_{16} \\
+			D_{30} = S_{30} + S_{16} + S_{15} \\
+			\dots							  \\
+			D_{17} = S_{17} + S_{3} + S_{2}   \\
+			D_{16} = S_{16} + S_{2} + S_{1}   \\
+		\end{cases}
+	\end{equation}
 \end{frame}
 
 \begin{frame}{接收部分具体设计}{解扰器设计-解扰器并行实现}
@@ -301,11 +314,7 @@
   \end{algorithmic}
 \end{frame}
 
-\begin{frame}{接收部分具体设计}{对齐检测设计-ILAS组成}
-  \begin{figure}
-  \includegraphics[scale=0.6]{./img/mapping_link_configuration_fields.pdf}
-  \end{figure}
-\end{frame}
+
 
 \begin{frame}{接收部分具体设计}{对齐检测设计-IFS/ILS仿真结果}
   \begin{figure}
